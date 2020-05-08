@@ -3,7 +3,7 @@ const dbEpisodes = require('./queriesEpisodes')
 const omdbApi = require('../omdbApi')
 
 const getTvshows = (request, response) => {
-  db.pool.query('SELECT * FROM tvshows ORDER BY id ASC', (error, results) => {
+  db.pool.query('SELECT title, id FROM tvshows ORDER BY id ASC', (error, results) => {
     if (error) {
       throw error
     }
@@ -27,11 +27,19 @@ const getEpisodesFromOmdbAndSave = async ({ imdbID, totalSeasons, tvid }) => {
 const checkIfShowsNeedUpdate = ({ tvshow }) => {
   //return if lastupdate was older than 7 days
   const date = new Date(tvshow.lastupdate)
-  date.setDate(date.getDate() + 1)
+  date.setDate(date.getDate() + 7)
   return date < new Date()
 }
 
 const getTvShowAndEpisodesFromDb = async ({ search }) => {
+  let results = await db.pool.query(`SELECT * FROM tvshows WHERE LOWER(title) = LOWER('${search}')`)
+  if (results.rows.length > 0) {
+    const episodes = await db.pool.query(`SELECT * FROM episodes WHERE tvid = ${results.rows[0].id}`)
+    return { tvshow: results.rows[0], episodes: episodes.rows }
+  }
+}
+
+const getTvShowAndEpisodesLikeFromDb = async ({ search }) => {
   let results = await db.pool.query(`SELECT * FROM tvshows WHERE LOWER(title) LIKE LOWER('${'%' + search + '%'}')`)
   if (results.rows.length > 0) {
     const episodes = await db.pool.query(`SELECT * FROM episodes WHERE tvid = ${results.rows[0].id}`)
@@ -67,7 +75,10 @@ const handleUpdateEpisodesFromOmdb = async ({ tvshow }) => {
 const findTvshowByName = async (request, response) => {
   const search = request.query.search
   if (search.length > 3) {
-    const data = await getTvShowAndEpisodesFromDb({ search })
+    let data = {}
+    data = await getTvShowAndEpisodesFromDb({ search })
+    if (data && !data.tvshow)
+      data = await getTvShowAndEpisodesLikeFromDb({ search })
     if (data && data.tvshow && data.tvshow.id) {
       if (checkIfShowsNeedUpdate({ tvshow: data.tvshow })) {
         const episodes = await handleUpdateEpisodesFromOmdb({ tvshow: data.tvshow })
@@ -111,6 +122,7 @@ const createTvshow = async (data) => {
     ${parseInt(totalSeasons)})
     RETURNING *
   `
+
   return await db.pool.query(query)
 }
 
@@ -142,8 +154,6 @@ const updateTvshow = (request, response) => {
     RETURNING *
   `
 
-  console.log(query)
-
   db.pool.query(query,
     (error, results) => {
       if (error) {
@@ -165,11 +175,74 @@ const deleteTvshow = (request, response) => {
   })
 }
 
+const cleanDb = (request, response) => {
+  db.pool.query(`DELETE FROM tvshows`, (error, results) => {
+    if (error) {
+      throw error
+    }
+    response.status(200).send(`Tvshows deleted`)
+  })
+}
+
+const getSugestionsTvshows = (request, response) => {
+  db.pool.query(`SELECT * FROM tvshows WHERE totalseasons > 2 ORDER BY RANDOM() LIMIT 9`, (error, results) => {
+    if (error) {
+      throw error
+    }
+    response.status(200).send(results.rows)
+  })
+}
+
+const populateDb = async (request, response) => {
+  for (let i = 0; i < arrayShows.list.length; i++) {
+    try {
+      const resp = await findTvshowByNamePopulate(arrayShows.list[i], response)
+      console.log('--------------------------------------------------')
+      console.log('SALVO', arrayShows.list[i])
+    } catch (e) {
+      console.log('**************************************************')
+      console.log('ERROR', arrayShows.list[i])
+    }
+  }
+}
+
+const findTvshowByNamePopulate = async (search, response) => {
+  if (search.length > 3) {
+    console.log(search)
+    const data = await getTvShowAndEpisodesFromDb({ search })
+    if (data && data.tvshow && data.tvshow.id) {
+      if (checkIfShowsNeedUpdate({ tvshow: data.tvshow })) {
+        const episodes = await handleUpdateEpisodesFromOmdb({ tvshow: data.tvshow })
+        response.status(200).json({ tvshow: data.tvshow, episodes })
+      } else {
+        response.status(200).json(data)
+      }
+    }
+    else {
+      results = await omdbApi.getTvShowByName(search)
+      //if exists result from OMDB
+      if (results.Response === 'True') {
+        const tvshow = await createTvshow(results)
+        const savedEpisodes = await getEpisodesFromOmdbAndSave({ imdbID: results.imdbID, totalSeasons: results.totalSeasons, tvid: tvshow.rows[0].id })
+        const data = {
+          tvshow: tvshow.rows[0],
+          episodes: savedEpisodes
+        }
+        return
+      }
+    }
+  }
+}
+
+
 module.exports = {
   getTvshows,
   getShowById,
   createTvshow,
   updateTvshow,
   findTvshowByName,
-  deleteTvshow
+  getSugestionsTvshows,
+  deleteTvshow,
+  cleanDb,
+  populateDb
 }

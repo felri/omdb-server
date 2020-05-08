@@ -1,12 +1,13 @@
 const express = require('express')
 require('dotenv').config()
+const cors = require('cors');
 const bodyParser = require('body-parser')
 const app = express()
 const dbTvshows = require('./db/queriesTvshows')
-const dbEpisodes = require('./db/queriesEpisodes')
 
 const port = 3001
 
+app.use(cors())
 app.use(bodyParser.json())
 app.use(
   bodyParser.urlencoded({
@@ -15,17 +16,11 @@ app.use(
 )
 
 app.get('/findtvshow', dbTvshows.findTvshowByName)
+app.get('/getsuggestions', dbTvshows.getSugestionsTvshows)
 app.get('/tvshows', dbTvshows.getTvshows)
-app.get('/tvshows/:id', dbTvshows.getShowById)
-app.post('/tvshows', dbTvshows.createTvshow)
-app.put('/tvshows/:id', dbTvshows.updateTvshow)
 app.delete('/tvshows/:id', dbTvshows.deleteTvshow)
-
-app.get('/episodes', dbEpisodes.getEpisodes)
-app.get('/episodes/:id', dbEpisodes.getEpisodeById)
-app.post('/episodes', dbEpisodes.createEpisode)
-app.put('/episodes/:id', dbEpisodes.updateEpisode)
-app.delete('/episodes/:id', dbEpisodes.deleteEpisode)
+app.delete('/tvshows/all', dbTvshows.cleanDb)
+app.get('/populateDb', dbTvshows.populateDb)
 
 app.listen(port, () => {
   console.log(`App running on port ${port}.`)
