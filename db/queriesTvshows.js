@@ -107,7 +107,7 @@ const findTvshowByName = async (request, response) => {
           episodes: savedEpisodes
         }
         console.log('********* NEW SHOW ADDED ********* ')
-        console.log(tvshow[0].title)
+        console.log(tvshow.rows[0].title)
         response.status(200).json(data)
       }
       else response.status(400).json(results)
