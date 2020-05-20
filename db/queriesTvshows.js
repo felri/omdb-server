@@ -49,21 +49,27 @@ const getTvShowAndEpisodesLikeFromDb = async ({ search }) => {
 
 const handleUpdateEpisodesFromOmdb = async ({ tvshow }) => {
   const date = new Date()
+  console.log('************ UPDATE SHOW ************')
+  console.log(tvshow.title)
   try {
     // DELETE OLD EPISODES FROM DB
     await db.pool.query(`DELETE FROM episodes WHERE tvid = ${tvshow.id}`)
+    console.log('DELETE OLD EPISODES FROM DB')
   } catch (e) {
     console.log('error during deletion episodes', e)
   }
   try {
     // UPDATE FIELD lastupdate TVSHOW
     await db.pool.query(`UPDATE tvshows SET lastupdate = '${date.toUTCString()}' WHERE ID = ${tvshow.id}`)
+    console.log('UPDATE FIELD lastupdate TVSHOW')
   } catch (e) {
     console.log('error during update lastupdate', e)
   }
   try {
     // GET EPISODES FROM OMDB, SAVE AND RETURN IT
     const episodes = await getEpisodesFromOmdbAndSave({ imdbID: tvshow.imdbid, totalSeasons: tvshow.totalseasons, tvid: tvshow.id })
+    console.log('GET EPISODES FROM OMDB')
+    console.log('----------------------')
     return episodes
   } catch (e) {
     console.log('error during getting new episodes update', e)
@@ -80,6 +86,9 @@ const findTvshowByName = async (request, response) => {
     if (data && !data.tvshow)
       data = await getTvShowAndEpisodesLikeFromDb({ search })
     if (data && data.tvshow && data.tvshow.id) {
+      console.log('----------------------')
+      console.log('SEARCH SHOW ')
+      console.log(data.tvshow.title)
       if (checkIfShowsNeedUpdate({ tvshow: data.tvshow })) {
         const episodes = await handleUpdateEpisodesFromOmdb({ tvshow: data.tvshow })
         response.status(200).json({ tvshow: data.tvshow, episodes })
@@ -97,6 +106,8 @@ const findTvshowByName = async (request, response) => {
           tvshow: tvshow.rows[0],
           episodes: savedEpisodes
         }
+        console.log('********* NEW SHOW ADDED ********* ')
+        console.log(tvshow[0].title)
         response.status(200).json(data)
       }
       else response.status(400).json(results)
@@ -166,7 +177,6 @@ const updateTvshow = (request, response) => {
 
 const deleteTvshow = (request, response) => {
   const id = parseInt(request.params.id)
-
   db.pool.query(`DELETE FROM tvshows WHERE id = ${id}`, (error, results) => {
     if (error) {
       throw error
@@ -208,7 +218,6 @@ const populateDb = async (request, response) => {
 
 const findTvshowByNamePopulate = async (search, response) => {
   if (search.length > 3) {
-    console.log(search)
     const data = await getTvShowAndEpisodesFromDb({ search })
     if (data && data.tvshow && data.tvshow.id) {
       if (checkIfShowsNeedUpdate({ tvshow: data.tvshow })) {

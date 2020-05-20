@@ -5,7 +5,7 @@ const bodyParser = require('body-parser')
 const app = express()
 const dbTvshows = require('./db/queriesTvshows')
 
-const port = 3001
+const port = 3234
 
 app.use(cors())
 app.use(bodyParser.json())
@@ -25,3 +25,4 @@ app.get('/populateDb', dbTvshows.populateDb)
 app.listen(port, () => {
   console.log(`App running on port ${port}.`)
 })
+

@@ -15,7 +15,6 @@ const getEpisodesByTvShowIdOmdb = async ({ imdbID, totalSeasons = 1 }) => {
 
   for (let season = 0; season < totalSeasons; season++) {
     const query = `${process.env.BASE_URL}?i=${imdbID}&season=${season + 1}${process.env.API_KEY}`
-    console.log(query)
     const response = await fetch(query)
     const data = await response.json()
     if (data.Response === 'True' && data.Episodes.length > 0)
