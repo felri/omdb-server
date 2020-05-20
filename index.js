@@ -18,9 +18,9 @@ app.use(
 app.get('/findtvshow', dbTvshows.findTvshowByName)
 app.get('/getsuggestions', dbTvshows.getSugestionsTvshows)
 app.get('/tvshows', dbTvshows.getTvshows)
-app.delete('/tvshows/:id', dbTvshows.deleteTvshow)
-app.delete('/tvshows/all', dbTvshows.cleanDb)
-app.get('/populateDb', dbTvshows.populateDb)
+// app.delete('/tvshows/:id', dbTvshows.deleteTvshow)
+// app.delete('/tvshows/all', dbTvshows.cleanDb)
+// app.get('/populateDb', dbTvshows.populateDb)
 
 app.listen(port, () => {
   console.log(`App running on port ${port}.`)
